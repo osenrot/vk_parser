@@ -1,5 +1,6 @@
 import sys
 import requests
+import time
 from config import access_token, user_id, api_version
 
 
@@ -13,7 +14,7 @@ class VkException(Exception):
 
 class VKUser:
     """
-    Находит друзей, находит общих друзей
+    Находит город, родной город и то же для друзей.
     """
 
     def __init__(self, access_token, user_id, api_version):
@@ -21,13 +22,25 @@ class VKUser:
             self.access_token = access_token
             self.user_id = user_id
             self.api_version = api_version
-            self.city, self.home_town = self.get_base_info([self.user_id])
-            self.friends_info, self.friends_count = self.get_friends_info(self.user_id)
+            self.city, self.home_town, self.deactivated, self.is_closed = self.get_base_info([self.user_id])
+
+            if self.deactivated == '' and self.is_closed == '':
+                self.friends_info, self.friends_count = self.get_friends_info(self.user_id)
+            else:
+                self.friends_info, self.friends_count = '', ''
+
+            self.result = {'user_id': self.user_id,
+                           'city': self.city,
+                           'home_town': self.home_town,
+                           'deactivated': self.deactivated,
+                           'is_closed': self.is_closed,
+                           'friends_count': self.friends_count,
+                           'friends_info': self.friends_info}
         except VkException as error:
             sys.exit(error)
 
     def make_request_url(self, method_name, parameters, using_access_token=False):
-        """read https://vk.com/dev/api_requests"""
+        """https://vk.com/dev/api_requests"""
 
         req_url = 'https://api.vk.com/method/{method_name}?{parameters}&v={api_v}'.format(method_name=method_name,
                                                                                           api_v=self.api_version,
@@ -38,39 +51,41 @@ class VKUser:
         return req_url
 
     def get_base_info(self, user_ids):
-        """read https://vk.com/dev/users.get"""
+        """https://vk.com/dev/users.get"""
         r = requests.get(self.make_request_url('users.get',
-                                               'user_ids={}&fields=city,home_town'.format(','.join(map(str, user_ids))),
+                                               'user_ids={}&fields=city,home_town,deactivated,is_closed'.format(','.join(map(str, user_ids))),
                                                True)).json()
         if 'error' in r.keys():
             raise VkException('Error message: {} Error code: {}'.format(r['error']['error_msg'],
                                                                         r['error']['error_code']))
         r = r['response'][0]
-        # Проверяем, если id из settings.py не деактивирован
-        if 'deactivated' in r.keys():
-            raise VkException("User deactivated")
 
-        return r['city']['title'], r['home_town']
+        return (r.get('city', {'title': ''})['title'],
+                r.get('home_town', ''),
+                r.get('deactivated', ''),
+                r.get('is_closed', ''))
 
     def get_friends_info(self, user_id):
-        """
-        read https://vk.com/dev/friends.get
+        """https://vk.com/dev/friends.get
         Принимает идентификатор пользователя
         """
         r = requests.get(self.make_request_url('friends.get',
-                                               'user_id={}&fields=uid,city,home_town'.format(user_id),
+                                               'user_id={}&fields=uid,city,home_town,deactivated,is_closed'.format(user_id),
                                                True)).json()['response']
 
-        # r = list(filter((lambda x: 'deactivated' not in x.keys()), r['items']))
-
-        return {item['id']: (item.get('city', {'title': ''})['title'],
-                             item.get('home_town', '')) for item in r['items']}, r['count']
+        return [{'city': item.get('city', {'title': ''})['title'],
+                 'home_town': item.get('home_town', ''),
+                 'deactivated': item.get('deactivated', ''),
+                 'is_closed': item.get('is_closed', '')} for item in r['items']], \
+               r['count']
 
 
 if __name__ == '__main__':
-    a = VKUser(access_token, user_id, api_version)
-    print(a.user_id)
-    print(a.city)
-    print(a.home_town)
-    print(a.friends_info)
-    print(a.friends_count)
+    # a = VKUser(access_token, user_id, api_version)
+    for id in range(110000000, 110001000):
+        a = VKUser(access_token, id, api_version)
+        print(a.result)
+        time.sleep(0.5)
+    # print(a.result)
+    # print(a.user_id)
+    # print(a.friends_info)
