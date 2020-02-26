@@ -2,6 +2,7 @@ import sys
 import requests
 import time
 from config import access_token, user_id, api_version
+from tqdm import trange
 
 
 class VkException(Exception):
@@ -25,15 +26,16 @@ class VKUser:
             self.city, self.home_town, self.deactivated, self.is_closed = self.get_base_info([self.user_id])
 
             if self.deactivated == '' and self.is_closed == '':
-                self.friends_info, self.friends_count = self.get_friends_info(self.user_id)
+                self.are_friends_accessible, self.friends_info, self.friends_count = self.get_friends_info(self.user_id)
             else:
-                self.friends_info, self.friends_count = '', ''
+                self.are_friends_accessible, self.friends_info, self.friends_count = '', '', ''
 
             self.result = {'user_id': self.user_id,
                            'city': self.city,
                            'home_town': self.home_town,
                            'deactivated': self.deactivated,
                            'is_closed': self.is_closed,
+                           'are_friends_accessible': self.are_friends_accessible,
                            'friends_count': self.friends_count,
                            'friends_info': self.friends_info}
         except VkException as error:
@@ -71,21 +73,25 @@ class VKUser:
         """
         r = requests.get(self.make_request_url('friends.get',
                                                'user_id={}&fields=uid,city,home_town,deactivated,is_closed'.format(user_id),
-                                               True)).json()['response']
+                                               True)).json()
 
-        return [{'city': item.get('city', {'title': ''})['title'],
-                 'home_town': item.get('home_town', ''),
-                 'deactivated': item.get('deactivated', ''),
-                 'is_closed': item.get('is_closed', '')} for item in r['items']], \
-               r['count']
+        if 'error' in r.keys() and r.get('error', {'error_code': None})['error_code'] == 15:
+            return False, [], 0
+        elif 'error' in r.keys():
+            raise VkException('Error message: {} Error code: {}'.format(r['error']['error_msg'],
+                                                                        r['error']['error_code']))
+        else:
+            return (True,
+                    [{'city': item.get('city', {'title': ''})['title'],
+                      'home_town': item.get('home_town', ''),
+                      'deactivated': item.get('deactivated', ''),
+                      'is_closed': item.get('is_closed', '')} for item in r['response']['items']],
+                    r['response']['count'])
 
 
 if __name__ == '__main__':
-    # a = VKUser(access_token, user_id, api_version)
-    for id in range(110000000, 110001000):
-        a = VKUser(access_token, id, api_version)
-        print(a.result)
-        time.sleep(0.5)
-    # print(a.result)
-    # print(a.user_id)
-    # print(a.friends_info)
+    with open('vk_users.txt', 'a') as f:
+        for id in trange(110000000, 110500000):
+            a = VKUser(access_token, id, api_version)
+            print(a.result, file=f)
+            time.sleep(0.5)
