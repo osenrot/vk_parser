@@ -57,7 +57,7 @@ class VKUser:
         """https://vk.com/dev/users.get"""
         r = requests.get(self.make_request_url('users.get',
                                                'user_ids={}&fields=city,home_town,deactivated,is_closed'.format(','.join(map(str, user_ids))),
-                                               True)).json()
+                                               True)).json(strict=False)
         if 'error' in r.keys():
             raise VkException('Error message: {} Error code: {}'.format(r['error']['error_msg'],
                                                                         r['error']['error_code']))
@@ -74,7 +74,7 @@ class VKUser:
         """
         r = requests.get(self.make_request_url('friends.get',
                                                'user_id={}&fields=uid,city,home_town,deactivated,is_closed'.format(user_id),
-                                               True)).json()
+                                               True)).json(strict=False)
 
         if 'error' in r.keys() and r.get('error', {'error_code': None})['error_code'] == 15:
             return False, [], 0
@@ -102,7 +102,7 @@ if __name__ == '__main__':
             chosen_ids.append(int(line))
 
     with open('vk_users_cities_with_friends.txt', 'a') as f:
-        for id in tqdm(chosen_ids):
+        for id in tqdm(chosen_ids[4263:]):
             a = VKUser(access_token, id, api_version)
             print(a.result, file=f)
-            time.sleep(0.5)
+            time.sleep(0.6)
