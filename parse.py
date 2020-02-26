@@ -1,8 +1,9 @@
 import sys
 import requests
 import time
+import numpy as np
 from config import access_token, user_id, api_version
-from tqdm import trange
+from tqdm import tqdm
 
 
 class VkException(Exception):
@@ -90,8 +91,18 @@ class VKUser:
 
 
 if __name__ == '__main__':
-    with open('vk_users.txt', 'a') as f:
-        for id in trange(110000000, 110500000):
+    # chosen_ids = np.random.choice(np.arange(500000000), 100000, replace=False)
+    # with open('chosen_ids.txt', 'w') as f:
+    #     for id in chosen_ids:
+    #         print(id, file=f, sep=',')
+
+    with open('chosen_ids.txt', 'r') as f:
+        chosen_ids = []
+        for line in f.readlines():
+            chosen_ids.append(int(line))
+
+    with open('vk_users_cities_with_friends.txt', 'a') as f:
+        for id in tqdm(chosen_ids):
             a = VKUser(access_token, id, api_version)
             print(a.result, file=f)
             time.sleep(0.5)
