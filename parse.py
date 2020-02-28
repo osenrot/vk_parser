@@ -102,7 +102,26 @@ if __name__ == '__main__':
             chosen_ids.append(int(line))
 
     with open('vk_users_cities_with_friends.txt', 'a') as f:
-        for id in tqdm(chosen_ids[4263:]):
-            a = VKUser(access_token, id, api_version)
-            print(a.result, file=f)
-            time.sleep(0.6)
+    #     for id in tqdm(chosen_ids[17791:]):
+    #         a = VKUser(access_token, id, api_version)
+    #         print(a.result, file=f)
+    #         time.sleep(0.6)
+
+        i = 0
+        while i <= 100000:
+            id = chosen_ids[i]
+            print('Trying to get {} user'.format(i))
+            try:
+                a = VKUser(access_token, id, api_version)
+                print(a.result, file=f)
+                print('Successful!')
+                time.sleep(0.6)
+                i += 1
+            except Exception as e:
+                if e.message == 'Error message: Rate limit reached Error code: 29':
+                    print('Rate Exception caught, sleeping for 10 minutes')
+                    time.sleep(600)
+                    print('Woke up')
+                else:
+                    raise e
+
