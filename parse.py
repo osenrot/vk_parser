@@ -117,11 +117,13 @@ if __name__ == '__main__':
                 print('Successful!')
                 time.sleep(0.6)
                 i += 1
-            except Exception as e:
-                if e.message == 'Error message: Rate limit reached Error code: 29':
+            except VkException as e:
+                if str(e) == 'Error message: Rate limit reached Error code: 29':
                     print('Rate Exception caught, sleeping for 10 minutes')
                     time.sleep(600)
                     print('Woke up')
                 else:
                     raise e
+            except Exception as e:
+                raise e
 
